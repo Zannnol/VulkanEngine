@@ -1,0 +1,25 @@
+{
+    "cmake.useCMakePresets": "always",
+    "cmake.configureOnOpen": true,
+    "C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools",
+    "cmake.generator": "Ninja",
+    "cmake.sourceDirectory": "${workspaceFolder}",
+    "cmake.buildDirectory": "${workspaceFolder}/build",
+    "cmake.buildBeforeRun": true,
+    "terminal.integrated.defaultProfile.windows": "Developer Command Prompt for VS 2022",
+    "glsllint.additionalStageAssociations": {
+        ".vsh": "vert",
+        ".fsh": "frag"
+    },
+    "C_Cpp.intelliSenseEngine": "default",
+
+    // Terminal profile
+    "terminal.integrated.profiles.windows": {
+        "Developer Command Prompt for VS 2022": {
+            "path": "cmd.exe",
+            "args": ["/k", "C:/Program Files (x86)/Microsoft Visual Studio/2022/BuildTools/VC/Auxiliary/Build/vcvars64.bat"],
+            "icon": "terminal-cmd"
+        }
+    }
+
+}

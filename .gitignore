@@ -1,0 +1,18 @@
+# Build output
+/build/
+/CMakeCache.txt
+/CMakeFiles/
+/*.sln
+/*.vcxproj*
+/*.user
+
+# VS Code
+.vscode/*.code-workspace
+.vscode/.browse
+.vscode/c_cpp_properties.json
+
+# Temp files
+*.obj
+*.exe
+*.pdb
+*.log
