@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.15)
+cmake_minimum_required(VERSION 3.21)
 project(VulkanEngine)
 
 set(CMAKE_TOOLCHAIN_FILE "$ENV{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake")
@@ -11,6 +11,7 @@ find_package(glm CONFIG REQUIRED)
 
 add_executable(VulkanEngine
     src/main.cpp
+    src/VulkanApp.cpp
 )
 
 target_link_libraries(VulkanEngine PRIVATE Vulkan::Vulkan glfw)
