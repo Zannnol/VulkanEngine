@@ -60,6 +60,32 @@ class VulkanApp {
         VkExtent2D swapChainExtent;
         std::vector<VkImageView> swapChainImageViews;
 
+        // Render pass & Pipeline
+        VkRenderPass renderPass;
+        VkPipelineLayout pipelineLayout = VK_NULL_HANDLE;
+        VkPipeline graphicsPipeline = VK_NULL_HANDLE;
+
+        // Framebuffers (one by swachaine image)
+        std::vector<VkFramebuffer> swapChainFrameBuffers;
+
+        // Command pool & command buffers
+        VkCommandPool commandPool;
+        std::vector<VkCommandBuffer> commandBuffers;
+
+        // Sync objects
+        VkSemaphore imageAvailableSemaphore;
+        VkSemaphore renderFinishedSemaphore;
+        VkFence inFlightFence;
+
+        // Creation functions
+        void createRenderPass();
+        void createGraphicsPipeline();
+        void createFramebuffers();
+        void createCommandPool();
+        void createCommandBuffers();
+        void createSyncObjects();
+
+        // Create Swapchain functions
         void createSwapChain();
         void createImageViews();
 
