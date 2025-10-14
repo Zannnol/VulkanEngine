@@ -108,6 +108,24 @@ class VulkanApp {
         VkPresentModeKHR chooseSwapPresentMode(const std::vector<VkPresentModeKHR>& availablePresentMode);
         VkExtent2D chooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities);
 
+        // Validation Layers (debug)
+        #ifdef NDEBUG
+        const bool enableValidationLayers = false;
+        #else
+        const bool enableValidationLayers = true;
+        #endif
+
+        const std::vector<const char*> validationLayers = {
+            "VK_LAYER_KHRONOS_validation"
+        };
+
+        // Check if requested validation layers are available on the system
+        bool checkValidationLayerSupport();
+
         // Instance
         void createInstance();
+
+        // DEBUG
+        VkDebugUtilsMessengerEXT debugMessenger;
+        void setupDebugMessenger();
 };
