@@ -13,6 +13,12 @@
     },
     "C_Cpp.intelliSenseEngine": "default",
 
+    // GLSL linter
+    "shadervalidator.glslangValidatorPath": "D:/Programs/VulkanSDK/Bin/glslangValidator.exe",
+    "shadervalidator.glslversion": "450",
+    "shadervalidator.defaultShaderType": "vert",
+    "shadervalidator.targetEnv": "vulkan1.3",
+
     // Terminal profile
     "terminal.integrated.profiles.windows": {
         "Developer Command Prompt for VS 2022": {

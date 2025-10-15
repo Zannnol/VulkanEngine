@@ -45,7 +45,7 @@ class VulkanApp {
         VkQueue presentQueue = VK_NULL_HANDLE;
 
         // Surface, needed for swapchain
-        VkSurfaceKHR surface;
+        VkSurfaceKHR surface = VK_NULL_HANDLE;
         void createSurface();
 
         // Extension list for device
@@ -61,7 +61,7 @@ class VulkanApp {
         std::vector<VkImageView> swapChainImageViews;
 
         // Render pass & Pipeline
-        VkRenderPass renderPass;
+        VkRenderPass renderPass = VK_NULL_HANDLE;
         VkPipelineLayout pipelineLayout = VK_NULL_HANDLE;
         VkPipeline graphicsPipeline = VK_NULL_HANDLE;
 
@@ -69,7 +69,7 @@ class VulkanApp {
         std::vector<VkFramebuffer> swapChainFrameBuffers;
 
         // Command pool & command buffers
-        VkCommandPool commandPool;
+        VkCommandPool commandPool = VK_NULL_HANDLE;
         std::vector<VkCommandBuffer> commandBuffers;
 
         // Sync objects
@@ -102,18 +102,20 @@ class VulkanApp {
             std::vector<VkSurfaceFormatKHR> formats;
             std::vector<VkPresentModeKHR> presentModes;
         };
-
         SwapChainSupportDetails querySwapChainSupport(VkPhysicalDevice device);
         VkSurfaceFormatKHR chooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats);
-        VkPresentModeKHR chooseSwapPresentMode(const std::vector<VkPresentModeKHR>& availablePresentMode);
+        VkPresentModeKHR chooseSwapPresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes);
         VkExtent2D chooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities);
 
+        // Shader module
+        VkShaderModule createShaderModule(const std::vector<char>& code);
+
         // Validation Layers (debug)
-        #ifdef NDEBUG
+    #ifdef NDEBUG
         const bool enableValidationLayers = false;
-        #else
+    #else
         const bool enableValidationLayers = true;
-        #endif
+    #endif
 
         const std::vector<const char*> validationLayers = {
             "VK_LAYER_KHRONOS_validation"
@@ -122,10 +124,13 @@ class VulkanApp {
         // Check if requested validation layers are available on the system
         bool checkValidationLayerSupport();
 
-        // Instance
+        // Vulkan Instance
         void createInstance();
 
-        // DEBUG
+        // DEBUG messenger
         VkDebugUtilsMessengerEXT debugMessenger;
         void setupDebugMessenger();
+
+        // Debug callback
+        static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUtilsMessageTypeFlagsEXT messageType, const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData);
 };
