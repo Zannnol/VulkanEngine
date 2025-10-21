@@ -668,41 +668,53 @@ void VulkanApp::mainLoop() {
 // ------------------------ Cleanup ------------------------
 
 void VulkanApp::cleanup() {
-    if(device != VK_NULL_HANDLE) {
-        vkDeviceWaitIdle(device);
+    vkDeviceWaitIdle(device);
+
+    // Commandbuffers cleanup BEFORE destroying the pool
+    if(!commandBuffers.empty() && commandPool != VK_NULL_HANDLE) {
+        vkFreeCommandBuffers(device, commandPool, static_cast<uint32_t>(commandBuffers.size()), commandBuffers.data());
+        commandBuffers.clear();
     }
 
-    for(auto imageView : swapChainImageViews) {
-        vkDestroyImageView(device, imageView, nullptr);
-    }
-
-    // Buffers cleanup
+    // Sync objects
     vkDestroySemaphore(device, renderFinishedSemaphore, nullptr);
     vkDestroySemaphore(device, imageAvailableSemaphore, nullptr);
     vkDestroyFence(device, inFlightFence, nullptr);
 
-    vkFreeCommandBuffers(device, commandPool, static_cast<uint32_t>(commandBuffers.size()), commandBuffers.data());
-    vkDestroyCommandPool(device, commandPool, nullptr);
+    // Swapchain Imageviews cleanup
+    for(auto imageView : swapChainImageViews) {
+        if(imageView != VK_NULL_HANDLE) {
+            vkDestroyImageView(device, imageView, nullptr);
+        }
+    }
+    swapChainImageViews.clear();
 
-    for(auto framebuffer : swapChainFrameBuffers) {
-        vkDestroyFramebuffer(device, framebuffer, nullptr);
+    // Swapchain cleanup
+    if(swapChain != VK_NULL_HANDLE) {
+        vkDestroySwapchainKHR(device, swapChain, nullptr);
+        swapChain = VK_NULL_HANDLE;
     }
 
-    if(graphicsPipeline != VK_NULL_HANDLE) {
-        vkDestroyPipeline(device, graphicsPipeline, nullptr);
-    }
-    if(pipelineLayout != VK_NULL_HANDLE) {
-        vkDestroyPipelineLayout(device, pipelineLayout, nullptr);
-    }
+    // Right cleanup order for the rest
+    vkDestroyPipeline(device, graphicsPipeline, nullptr);
+    vkDestroyPipelineLayout(device, pipelineLayout, nullptr);
     vkDestroyRenderPass(device, renderPass, nullptr);
 
-    for(auto imageView : swapChainImageViews) {
-        vkDestroyImageView(device, imageView, nullptr);
+    for(auto framebuffer : swapChainFrameBuffers) {
+        if(framebuffer != VK_NULL_HANDLE) {
+            vkDestroyFramebuffer(device, framebuffer, nullptr);
+        }
     }
+    swapChainFrameBuffers.clear();
 
-    vkDestroySwapchainKHR(device, swapChain, nullptr);
-
-    vkDestroyDevice(device, nullptr);
+    if(commandPool != VK_NULL_HANDLE) {
+        vkDestroyCommandPool(device, commandPool, nullptr);
+        commandPool = VK_NULL_HANDLE;
+    }
+    
+    if(device != VK_NULL_HANDLE) {
+        vkDestroyDevice(device, nullptr);
+    }
 
     // Clean debug messenger
     if(enableValidationLayers) {
@@ -712,10 +724,15 @@ void VulkanApp::cleanup() {
         }
     }
 
-    vkDestroySurfaceKHR(instance, surface, nullptr);
-    
-    vkDestroyInstance(instance, nullptr);
+    if(surface != VK_NULL_HANDLE) {
+        vkDestroySurfaceKHR(instance, surface, nullptr);
+        surface = VK_NULL_HANDLE;
+    }
 
+    if(instance != VK_NULL_HANDLE) {
+        vkDestroyInstance(instance, nullptr);
+    }
+    
     // GLFW cleanup
     glfwDestroyWindow(window);
     glfwTerminate();

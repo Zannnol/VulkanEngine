@@ -94,7 +94,8 @@
         "xutility": "cpp",
         "chrono": "cpp",
         "forward_list": "cpp",
-        "ratio": "cpp"
+        "ratio": "cpp",
+        "fstream": "cpp"
     }
 
 }
