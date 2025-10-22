@@ -28,6 +28,7 @@ class VulkanApp {
         void initWindow();
         void initVulkan();
         void mainLoop();
+        void drawFrame();
         void cleanup();
 
         //GLFW setup
@@ -73,6 +74,9 @@ class VulkanApp {
         std::vector<VkCommandBuffer> commandBuffers;
 
         // Sync objects
+        const int MAX_FRAMES_IN_FLIGHT = 2;
+        size_t currentFrame = 0;
+
         VkSemaphore imageAvailableSemaphore;
         VkSemaphore renderFinishedSemaphore;
         VkFence inFlightFence;
