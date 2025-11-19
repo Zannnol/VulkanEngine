@@ -564,6 +564,15 @@ void VulkanApp::createCommandBuffers() {
 }
 
 void VulkanApp::createSyncObjects() {
+    // Resize sync vectors
+    imageAvailableSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
+    inFlightFences.resize(MAX_FRAMES_IN_FLIGHT);
+
+    // Last render semaphore is resized by the numbre of frames in the swapchain
+    renderFinishedSemaphores.resize(swapChainImages.size());
+
+    imagesInFlight.resize(swapChainImages.size(), VK_NULL_HANDLE);
+
     VkSemaphoreCreateInfo semaphoreInfo{};
     semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
 
@@ -571,11 +580,20 @@ void VulkanApp::createSyncObjects() {
     fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
     fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 
-    if(vkCreateSemaphore(device, &semaphoreInfo, nullptr, &imageAvailableSemaphore) != VK_SUCCESS ||
-        vkCreateSemaphore(device, &semaphoreInfo, nullptr, &renderFinishedSemaphore) != VK_SUCCESS ||
-        vkCreateFence(device, &fenceInfo, nullptr, &inFlightFence) != VK_SUCCESS) {
-            throw std::runtime_error("Failed to create synchronization objects");
+    // Create a set of objects for each frame in flight
+    for(size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+        if(vkCreateSemaphore(device, &semaphoreInfo, nullptr, &imageAvailableSemaphores[i]) != VK_SUCCESS ||
+            vkCreateFence(device, &fenceInfo, nullptr, &inFlightFences[i]) != VK_SUCCESS) {
+                throw std::runtime_error("Failed to create frame synchronization objects " + std::to_string(i));
+            }
+    }
+
+    // Create last render semaphores for EVERY images (size: swapChainImages.size())
+    for(size_t i = 0; i < swapChainImages.size(); i++) {
+        if(vkCreateSemaphore(device, &semaphoreInfo, nullptr, &renderFinishedSemaphores[i]) != VK_SUCCESS) {
+            throw std::runtime_error("Failed to create render finished semaphores");
         }
+    }
 }
 
 void VulkanApp::createSwapChain() {
@@ -659,15 +677,30 @@ void VulkanApp::createImageViews() {
 
 // ------------------------ Main Loop ------------------------
 void VulkanApp::drawFrame() {
-    vkWaitForFences(device, 1, &inFlightFence, VK_TRUE, UINT64_MAX);
-    vkResetFences(device, 1, &inFlightFence);
+    // Wait and FENCE reset (indexed by currentFrame)
+    vkWaitForFences(device, 1, &inFlightFences[currentFrame], VK_TRUE, UINT64_MAX);
 
     uint32_t imageIndex;
-    vkAcquireNextImageKHR(device, swapChain, UINT64_MAX, imageAvailableSemaphore, VK_NULL_HANDLE, &imageIndex);
+    // 1. Acquisition : Indexed semaphore use
+    VkResult result = vkAcquireNextImageKHR(device, swapChain, UINT64_MAX, imageAvailableSemaphores[currentFrame], VK_NULL_HANDLE, &imageIndex);
+    if(result == VK_ERROR_OUT_OF_DATE_KHR) {
+        createSwapChain();
+        return;
+    }
 
+    // Verify if frame is already in flight
+    if(imagesInFlight[imageIndex] != VK_NULL_HANDLE) {
+        // Wait for the associated fence is signaled
+        vkWaitForFences(device, 1, &imagesInFlight[imageIndex], VK_TRUE, UINT64_MAX);
+    }
+
+    // Associate the current frame's fence at the acquisited image
+    imagesInFlight[imageIndex] = inFlightFences[currentFrame]; // <- VERY important for synchronisation !
+
+    vkResetFences(device, 1, &inFlightFences[currentFrame]);
     vkResetCommandBuffer(commandBuffers[imageIndex], 0);
 
-    // Save commands in commandbuffer
+    // 2. Save : Commands in commandbuffer
     VkCommandBufferBeginInfo beginInfo{};
     beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 
@@ -701,7 +734,8 @@ void VulkanApp::drawFrame() {
     VkSubmitInfo submitInfo{};
     submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 
-    VkSemaphore waitSemaphore[] = { imageAvailableSemaphore };
+    // 3. Submission : Use of indexed semaphores
+    VkSemaphore waitSemaphore[] = { imageAvailableSemaphores[currentFrame] };
     VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
     submitInfo.waitSemaphoreCount = 1;
     submitInfo.pWaitSemaphores = waitSemaphore;
@@ -710,25 +744,28 @@ void VulkanApp::drawFrame() {
     submitInfo.commandBufferCount = 1;
     submitInfo.pCommandBuffers = &commandBuffers[imageIndex];
 
-    VkSemaphore signalSemaphores[] = { renderFinishedSemaphore };
+    VkSemaphore signalSemaphores[] = { renderFinishedSemaphores[imageIndex] };
     submitInfo.signalSemaphoreCount = 1;
     submitInfo.pSignalSemaphores = signalSemaphores;
 
-    if(vkQueueSubmit(graphicsQueue, 1, &submitInfo, inFlightFence) != VK_SUCCESS) {
+    // 4. Submission : Use of indexed fences
+    if(vkQueueSubmit(graphicsQueue, 1, &submitInfo, inFlightFences[currentFrame]) != VK_SUCCESS) {
         throw std::runtime_error("Failed to submit draw command buffer");
     }
 
     VkPresentInfoKHR presentInfo{};
     presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
     presentInfo.waitSemaphoreCount = 1;
-    presentInfo.pWaitSemaphores = signalSemaphores;
+    presentInfo.pWaitSemaphores = signalSemaphores; // pWaitSemaphore always point toward the indexed semaphore
 
     VkSwapchainKHR swapChains[] = { swapChain };
     presentInfo.swapchainCount = 1;
     presentInfo.pSwapchains = swapChains;
     presentInfo.pImageIndices = &imageIndex;
 
+    // 5. Presentation and update of the index
     vkQueuePresentKHR(presentQueue, &presentInfo);
+    currentFrame = (currentFrame +1) % MAX_FRAMES_IN_FLIGHT; // Cyclic index
 }
 
 
@@ -747,16 +784,24 @@ void VulkanApp::mainLoop() {
 void VulkanApp::cleanup() {
     vkDeviceWaitIdle(device);
 
+    // Cleanup of indexed objects by frame slot (MAX_FRAMES_IN_FLIGHT)
+    for(size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+        // Destroying fences
+        vkDestroyFence(device, inFlightFences[i], nullptr);
+        // Destroying image's acquisition semaphores
+        vkDestroySemaphore(device, imageAvailableSemaphores[i], nullptr);
+    }
+
     // Commandbuffers cleanup BEFORE destroying the pool
     if(!commandBuffers.empty() && commandPool != VK_NULL_HANDLE) {
         vkFreeCommandBuffers(device, commandPool, static_cast<uint32_t>(commandBuffers.size()), commandBuffers.data());
         commandBuffers.clear();
     }
 
-    // Sync objects
-    vkDestroySemaphore(device, renderFinishedSemaphore, nullptr);
-    vkDestroySemaphore(device, imageAvailableSemaphore, nullptr);
-    vkDestroyFence(device, inFlightFence, nullptr);
+    // Sync objects (repeat on MAX_FRAMES_IN_FLIGHT)
+    for(size_t i = 0; i < swapChainImages.size(); i++) {
+        vkDestroySemaphore(device, renderFinishedSemaphores[i], nullptr);
+    }
 
     // Swapchain Imageviews cleanup
     for(auto imageView : swapChainImageViews) {

@@ -75,11 +75,12 @@ class VulkanApp {
 
         // Sync objects
         const int MAX_FRAMES_IN_FLIGHT = 2;
-        size_t currentFrame = 0;
 
-        VkSemaphore imageAvailableSemaphore;
-        VkSemaphore renderFinishedSemaphore;
-        VkFence inFlightFence;
+        std::vector<VkSemaphore> imageAvailableSemaphores;
+        std::vector<VkSemaphore> renderFinishedSemaphores;
+        std::vector<VkFence> inFlightFences;
+        std::vector<VkFence> imagesInFlight;
+        size_t currentFrame = 0;
 
         // Creation functions
         void createRenderPass();
